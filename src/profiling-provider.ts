@@ -47,6 +47,7 @@ export class ProfilingProvider {
     if (wallEnabled) {
       this.wallProfiler = new WallProfiler({
         samplingIntervalMicros: this.config.wallSamplingIntervalMicros,
+        traceCorrelation: this.config.traceCorrelation,
       });
       this.wallProfiler.start();
     }

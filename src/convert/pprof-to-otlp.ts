@@ -15,6 +15,15 @@ function toNumber(val: Numeric | null | undefined): number {
   return Number(val) || 0;
 }
 
+// Convert hex string to bytes Buffer
+function hexToBytes(hex: string, length: number): Buffer {
+  const buf = Buffer.alloc(length);
+  for (let i = 0; i < Math.min(hex.length / 2, length); i++) {
+    buf[i] = parseInt(hex.substring(i * 2, i * 2 + 2), 16);
+  }
+  return buf;
+}
+
 export class DictionaryBuilder {
   private _strings: string[] = [''];
   private _stringIndex = new Map<string, number>([['', 0]]);
@@ -24,6 +33,7 @@ export class DictionaryBuilder {
   private _locationKeyToIndex = new Map<string, number>();
   private _mappings: object[] = [{}];
   private _links: object[] = [{}];
+  private _linkKeyToIndex = new Map<string, number>();
   private _attributes: object[] = [{}];
   private _attributeKeyToIndex = new Map<string, number>();
   private _stacks: object[] = [{}];
@@ -77,6 +87,16 @@ export class DictionaryBuilder {
     idx = this._attributes.length;
     this._attributeKeyToIndex.set(key, idx);
     this._attributes.push(attr);
+    return idx;
+  }
+
+  addLink(traceId: Buffer, spanId: Buffer): number {
+    const key = `${traceId.toString('hex')}:${spanId.toString('hex')}`;
+    let idx = this._linkKeyToIndex.get(key);
+    if (idx !== undefined) return idx;
+    idx = this._links.length;
+    this._linkKeyToIndex.set(key, idx);
+    this._links.push({ traceId, spanId });
     return idx;
   }
 
@@ -142,14 +162,30 @@ export function pprofToOtlp(
     );
   }
 
-  // Samples
+  // Samples — detect trace_id/span_id labels for Link table
   const otlpSamples: object[] = [];
   for (const sample of pprof.sample) {
     const locationIndices = sample.locationId.map((id) => pprofLocIdToDict.get(toNumber(id)) ?? 0);
     const stackIndex = locationIndices.length > 0 ? dict.addStack(locationIndices) : 0;
 
     const attributeIndices: number[] = [];
+    let traceIdHex: string | null = null;
+    let spanIdHex: string | null = null;
+
     for (const label of sample.label) {
+      const keyStr = pprofStrings[toNumber(label.key)] || '';
+
+      // Extract trace correlation labels for the Link table
+      if (keyStr === 'trace_id' && label.str && toNumber(label.str) !== 0) {
+        traceIdHex = pprofStrings[toNumber(label.str)] || null;
+        continue;
+      }
+      if (keyStr === 'span_id' && label.str && toNumber(label.str) !== 0) {
+        spanIdHex = pprofStrings[toNumber(label.str)] || null;
+        continue;
+      }
+
+      // Regular attribute
       const keyStrindex = mapStr(label.key);
       const value =
         label.str && toNumber(label.str) !== 0
@@ -160,10 +196,19 @@ export function pprofToOtlp(
       attributeIndices.push(dict.addAttribute({ keyStrindex, value, unitStrindex }));
     }
 
+    // Build link if trace correlation data present
+    let linkIndex = 0;
+    if (traceIdHex && spanIdHex) {
+      const traceIdBytes = hexToBytes(traceIdHex, 16);
+      const spanIdBytes = hexToBytes(spanIdHex, 8);
+      linkIndex = dict.addLink(traceIdBytes, spanIdBytes);
+    }
+
     otlpSamples.push({
       stackIndex,
       values: sample.value.map((v) => toNumber(v)),
       attributeIndices,
+      linkIndex: linkIndex || undefined,
     });
   }
 

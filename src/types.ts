@@ -18,6 +18,7 @@ export interface ProfilingProviderConfig {
   resource?: ResourceAttributes;
   serviceName?: string;
   exporter?: ProfileExporter;
+  traceCorrelation?: boolean;
   wallProfilingEnabled?: boolean;
   heapProfilingEnabled?: boolean;
   collectionIntervalMs?: number;
