@@ -1,0 +1,38 @@
+{
+  "name": "@opentelemetry/profiling-node",
+  "version": "0.1.0",
+  "description": "OpenTelemetry Node.js Profiling SDK",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "format": "prettier --write src/",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@datadog/pprof": "^5.13.0",
+    "pprof-format": "^2.2.0",
+    "protobufjs": "^7.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.57.1",
+    "@typescript-eslint/parser": "^8.57.1",
+    "eslint": "^9.39.4",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.5",
+    "prettier": "^3.8.1",
+    "typescript": "^5.0.0"
+  },
+  "files": [
+    "dist",
+    "src/proto"
+  ],
+  "license": "Apache-2.0"
+}
