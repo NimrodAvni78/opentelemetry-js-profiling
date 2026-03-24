@@ -48,6 +48,7 @@ export class ProfilingProvider {
       this.wallProfiler = new WallProfiler({
         samplingIntervalMicros: this.config.wallSamplingIntervalMicros,
         traceCorrelation: this.config.traceCorrelation,
+        spanAttributeKeys: this.config.spanAttributeKeys,
       });
       this.wallProfiler.start();
     }

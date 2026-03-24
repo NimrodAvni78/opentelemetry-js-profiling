@@ -6,6 +6,7 @@ import { ProfileData } from '../types';
 export interface WallProfilerOptions {
   samplingIntervalMicros?: number;
   traceCorrelation?: boolean;
+  spanAttributeKeys?: string[];
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -23,6 +24,7 @@ function tryLoadOtelApi(): OtelApi | null {
 export class WallProfiler {
   private readonly intervalMicros: number;
   private readonly traceCorrelation: boolean;
+  private readonly spanAttributeKeys: string[];
   private started = false;
   private lastCollectTime: Date | null = null;
   private otelApi: OtelApi | null = null;
@@ -32,6 +34,7 @@ export class WallProfiler {
   constructor(options: WallProfilerOptions = {}) {
     this.intervalMicros = options.samplingIntervalMicros ?? 10000; // 100Hz
     this.traceCorrelation = options.traceCorrelation ?? false;
+    this.spanAttributeKeys = options.spanAttributeKeys ?? [];
   }
 
   start(): void {
@@ -79,7 +82,7 @@ export class WallProfiler {
         const span = otelApi.trace.getActiveSpan();
         if (span) {
           const ctx = span.spanContext();
-          pprof.time.setContext({ traceId: ctx.traceId, spanId: ctx.spanId });
+          pprof.time.setContext({ traceId: ctx.traceId, spanId: ctx.spanId, span });
         } else {
           pprof.time.setContext(undefined);
         }
@@ -132,13 +135,26 @@ export class WallProfiler {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private buildGenerateLabels(): (args: { node: any; context?: any }) => Record<string, any> {
+    const attrKeys = this.spanAttributeKeys;
     return ({ context }) => {
       const labels: Record<string, string> = {};
       const ctx = context?.context;
-      if (ctx?.traceId) {
-        labels.trace_id = ctx.traceId;
-        labels.span_id = ctx.spanId;
+      if (!ctx?.traceId) return labels;
+
+      labels.trace_id = ctx.traceId;
+      labels.span_id = ctx.spanId;
+
+      // Read span attributes at collection time (not at context-switch time)
+      // so attributes set after span activation (e.g. http.route) are captured
+      if (attrKeys.length > 0 && ctx.span?.attributes) {
+        for (const key of attrKeys) {
+          const val = ctx.span.attributes[key];
+          if (val != null) {
+            labels[key] = String(val);
+          }
+        }
       }
+
       return labels;
     };
   }

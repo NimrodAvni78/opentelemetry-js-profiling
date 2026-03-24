@@ -219,6 +219,65 @@ describe('trace correlation', () => {
 
     expect(foundCorrelation).toBe(true);
   });
+
+  it('attaches span attributes as labels when spanAttributeKeys is configured', async () => {
+    const contextManager = new AsyncLocalStorageContextManager();
+    context.setGlobalContextManager(contextManager.enable());
+
+    const spanExporter = new InMemorySpanExporter();
+    tracerProvider = new BasicTracerProvider();
+    tracerProvider.addSpanProcessor(new SimpleSpanProcessor(spanExporter));
+    tracerProvider.register();
+
+    const tracer = trace.getTracer('test');
+
+    const exporter = new CollectingExporter();
+    const provider = new ProfilingProvider({
+      serviceName: 'attr-test',
+      exporter,
+      traceCorrelation: true,
+      spanAttributeKeys: ['http.route', 'custom.tag'],
+      collectionIntervalMs: 60_000,
+      heapProfilingEnabled: false,
+    });
+
+    provider.start();
+
+    tracer.startActiveSpan('request', (span) => {
+      // Set attributes after span activation — just like Express/Koa would
+      span.setAttribute('http.route', '/api/users');
+      span.setAttribute('custom.tag', 'hello');
+      span.setAttribute('ignored.key', 'not-captured');
+      burnCpu(500);
+      span.end();
+    });
+
+    await provider.stop();
+
+    const wallProfiles = exporter.profiles.filter((p) => p.data.profileType === 'wall');
+    expect(wallProfiles.length).toBeGreaterThanOrEqual(1);
+
+    let foundRoute = false;
+    let foundCustomTag = false;
+    let foundIgnored = false;
+
+    for (const { data } of wallProfiles) {
+      const strings = getProfileStrings(data);
+      for (const sample of data.profile.sample) {
+        for (const label of sample.label) {
+          const keyStr = strings[Number(label.key)] || '';
+          const valStr = strings[Number(label.str)] || '';
+          if (keyStr === 'http.route' && valStr === '/api/users') foundRoute = true;
+          if (keyStr === 'custom.tag' && valStr === 'hello') foundCustomTag = true;
+          if (keyStr === 'ignored.key') foundIgnored = true;
+        }
+      }
+    }
+
+    expect(foundRoute).toBe(true);
+    expect(foundCustomTag).toBe(true);
+    expect(foundIgnored).toBe(false);
+  });
 });
 
 describe('OTLP encoding', () => {
