@@ -1,0 +1,13 @@
+name = 'otel-profiling-node'
+proto_out_dir = './proto'
+
+[opentelemetry-proto]
+url = 'github.com/open-telemetry/opentelemetry-proto'
+protocol = 'https'
+revision = 'v1.10.0'
+allow_policies = [
+    'opentelemetry/proto/common/v1/common.proto',
+    'opentelemetry/proto/resource/v1/resource.proto',
+    'opentelemetry/proto/profiles/v1development/*',
+    'opentelemetry/proto/collector/profiles/v1development/profiles_service.proto',
+]

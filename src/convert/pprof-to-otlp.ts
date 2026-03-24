@@ -1,8 +1,10 @@
 import { randomBytes } from 'node:crypto';
-import { resolve } from 'node:path';
-import protobuf from 'protobufjs';
 import { Profile } from 'pprof-format';
 import { ResourceAttributes } from '../types';
+import { opentelemetry } from '../generated/otlp';
+
+const ExportProfilesServiceRequest =
+  opentelemetry.proto.collector.profiles.v1development.ExportProfilesServiceRequest;
 
 type Numeric = number | bigint;
 
@@ -190,24 +192,6 @@ export function pprofToOtlp(
   };
 }
 
-// Proto types (lazy loaded)
-let _root: protobuf.Root | null = null;
-let _exportReqType: protobuf.Type | null = null;
-
-function getProtoType(): protobuf.Type {
-  if (_exportReqType) return _exportReqType;
-  const protoDir = resolve(__dirname, '..', 'proto');
-  _root = protobuf.loadSync(
-    ['common.proto', 'resource.proto', 'profiles.proto', 'profiles_service.proto'].map((f) =>
-      resolve(protoDir, f),
-    ),
-  );
-  _exportReqType = _root.lookupType(
-    'opentelemetry.proto.collector.profiles.v1development.ExportProfilesServiceRequest',
-  );
-  return _exportReqType;
-}
-
 export function buildExportRequest(
   profiles: { profile: Profile; profileType: string }[],
   resource: ResourceAttributes,
@@ -263,8 +247,6 @@ export function buildExportRequest(
     dictionary: dict.build(),
   };
 
-  const ExportReq = getProtoType();
-  const message = ExportReq.create(request);
-  const encoded = ExportReq.encode(message).finish();
+  const encoded = ExportProfilesServiceRequest.encode(request).finish();
   return { encoded };
 }
