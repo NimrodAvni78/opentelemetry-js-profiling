@@ -13,8 +13,8 @@
     "proto": "npm run proto:fetch && npm run proto:generate",
     "build": "npm run proto && tsc",
     "test": "vitest run",
-    "lint": "eslint src/",
-    "lint:fix": "eslint src/ --fix",
+    "lint": "eslint src/ test/",
+    "lint:fix": "eslint src/ test/ --fix",
     "format": "prettier --write src/",
     "clean": "rm -rf dist proto src/generated"
   },
@@ -23,7 +23,18 @@
     "pprof-format": "^2.2.0",
     "protobufjs": "^7.0.0"
   },
+  "peerDependencies": {
+    "@opentelemetry/api": ">=1.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@opentelemetry/api": {
+      "optional": true
+    }
+  },
   "devDependencies": {
+    "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/context-async-hooks": "^1.30.0",
+    "@opentelemetry/sdk-trace-base": "^1.30.0",
     "@types/node": "^20.0.0",
     "@typescript-eslint/eslint-plugin": "^8.57.1",
     "@typescript-eslint/parser": "^8.57.1",
@@ -33,7 +44,8 @@
     "eslint-plugin-prettier": "^5.5.5",
     "prettier": "^3.8.1",
     "protobufjs-cli": "^2.0.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "vitest": "^1.6.1"
   },
   "files": [
     "dist"
