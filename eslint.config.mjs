@@ -32,4 +32,25 @@ export default [
       'no-console': ['warn', { allow: ['log', 'warn', 'error'] }],
     },
   },
+  {
+    files: ['test/**/*.ts'],
+    languageOptions: {
+      parser: tsparser,
+      parserOptions: {
+        project: './tsconfig.test.json',
+      },
+    },
+    plugins: {
+      '@typescript-eslint': tseslint,
+      prettier,
+    },
+    rules: {
+      ...tseslint.configs.recommended.rules,
+      ...prettierConfig.rules,
+      'prettier/prettier': 'error',
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-explicit-any': 'warn',
+      'no-console': 'off',
+    },
+  },
 ];
