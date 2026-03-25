@@ -1,7 +1,7 @@
 import { connect, constants, ClientHttp2Session } from 'node:http2';
 import { URL } from 'node:url';
-import { ProfileData, ProfileExporter, ResourceAttributes } from '../types';
-import { buildExportRequest } from '../convert/pprof-to-otlp';
+import { ProfileData, ProfileExporter } from '../types';
+import { encodeRequest } from '../convert/pprof-to-otlp';
 
 function frameMessage(buffer: Uint8Array): Buffer {
   const frame = Buffer.alloc(5 + buffer.length);
@@ -43,11 +43,8 @@ export class OtlpGrpcProfileExporter implements ProfileExporter {
     }
   }
 
-  async export(data: ProfileData, resource: ResourceAttributes): Promise<void> {
-    const { encoded } = buildExportRequest(
-      [{ profile: data.profile, profileType: data.profileType }],
-      resource,
-    );
+  async export(data: ProfileData): Promise<void> {
+    const encoded = encodeRequest(data.request);
     const framed = frameMessage(encoded);
     await this.send(framed);
   }

@@ -2,6 +2,8 @@ import { ProfileExporter, ProfilingProviderConfig, ResourceAttributes } from './
 import { resolveResource } from './resource';
 import { WallProfiler } from './profilers/wall-profiler';
 import { HeapProfiler } from './profilers/heap-profiler';
+import { RawProfileData } from './profilers/raw-profile-data';
+import { buildRequest } from './convert/pprof-to-otlp';
 import { OtlpGrpcProfileExporter } from './exporters/otlp-grpc-exporter';
 import { ConsoleProfileExporter } from './exporters/console-exporter';
 
@@ -47,6 +49,8 @@ export class ProfilingProvider {
     if (wallEnabled) {
       this.wallProfiler = new WallProfiler({
         samplingIntervalMicros: this.config.wallSamplingIntervalMicros,
+        traceCorrelation: this.config.traceCorrelation,
+        spanAttributeKeys: this.config.spanAttributeKeys,
       });
       this.wallProfiler.start();
     }
@@ -76,9 +80,9 @@ export class ProfilingProvider {
     await this.collectAndExport();
 
     if (this.wallProfiler) {
-      const final = this.wallProfiler.stop();
-      if (final) {
-        await this.exporter.export(final, this.resource).catch(() => {});
+      const raw = this.wallProfiler.stop();
+      if (raw) {
+        await this.convertAndExport(raw);
       }
       this.wallProfiler = null;
     }
@@ -91,13 +95,25 @@ export class ProfilingProvider {
     await this.exporter.shutdown();
   }
 
+  private async convertAndExport(raw: RawProfileData): Promise<void> {
+    const request = buildRequest([raw], this.resource);
+    await this.exporter
+      .export({
+        profileType: raw.profileType,
+        startedAt: raw.startedAt,
+        stoppedAt: raw.stoppedAt,
+        request,
+      })
+      .catch(() => {});
+  }
+
   private async collectAndExport(): Promise<void> {
     const exports: Promise<void>[] = [];
 
     if (this.wallProfiler) {
       try {
-        const data = this.wallProfiler.collect();
-        exports.push(this.exporter.export(data, this.resource).catch(() => {}));
+        const raw = this.wallProfiler.collect();
+        exports.push(this.convertAndExport(raw));
       } catch {
         /* profiler not started */
       }
@@ -105,8 +121,8 @@ export class ProfilingProvider {
 
     if (this.heapProfiler) {
       try {
-        const data = this.heapProfiler.collect();
-        exports.push(this.exporter.export(data, this.resource).catch(() => {}));
+        const raw = this.heapProfiler.collect();
+        exports.push(this.convertAndExport(raw));
       } catch {
         /* profiler not started */
       }

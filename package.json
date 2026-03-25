@@ -13,8 +13,8 @@
     "proto": "npm run proto:fetch && npm run proto:generate",
     "build": "npm run proto && tsc",
     "test": "vitest run",
-    "lint": "eslint src/",
-    "lint:fix": "eslint src/ --fix",
+    "lint": "eslint src/ test/",
+    "lint:fix": "eslint src/ test/ --fix",
     "format": "prettier --write src/",
     "clean": "rm -rf dist proto src/generated"
   },

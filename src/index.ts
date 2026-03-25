@@ -7,6 +7,12 @@ export type {
   ProfileExporter,
   ProfileData,
   ResourceAttributes,
+  IExportProfilesServiceRequest,
 } from './types';
 export { resolveResource } from './resource';
-export { buildExportRequest, DictionaryBuilder, pprofToOtlp } from './convert/pprof-to-otlp';
+export {
+  buildRequest,
+  encodeRequest,
+  DictionaryBuilder,
+  pprofToOtlp,
+} from './convert/pprof-to-otlp';

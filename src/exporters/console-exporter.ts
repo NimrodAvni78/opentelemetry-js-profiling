@@ -1,58 +1,64 @@
-import { ProfileData, ProfileExporter, ResourceAttributes } from '../types';
-
-type Numeric = number | bigint;
-
-function toNumber(val: Numeric | null | undefined): number {
-  if (val == null) return 0;
-  if (typeof val === 'number') return val;
-  if (typeof val === 'bigint') return Number(val);
-  return Number(val) || 0;
-}
+import { ProfileData, ProfileExporter } from '../types';
 
 export class ConsoleProfileExporter implements ProfileExporter {
-  async export(data: ProfileData, resource: ResourceAttributes): Promise<void> {
+  async export(data: ProfileData): Promise<void> {
     const duration = data.stoppedAt.getTime() - data.startedAt.getTime();
-    const sampleCount = data.profile.sample.length;
-    const functionCount = data.profile.function.length;
-    const strings = data.profile.stringTable.strings;
+    const rp = data.request.resourceProfiles?.[0];
+    const dict = data.request.dictionary;
+    const profile = rp?.scopeProfiles?.[0]?.profiles?.[0];
+    const strings = dict?.stringTable ?? [];
+    const functions = dict?.functionTable ?? [];
+    const locations = dict?.locationTable ?? [];
+    const stacks = dict?.stackTable ?? [];
+    const samples = profile?.samples ?? [];
+
+    // Service name from resource attributes
+    const serviceNameAttr = rp?.resource?.attributes?.find((a) => a.key === 'service.name');
+    const serviceName = serviceNameAttr?.value?.stringValue ?? 'unknown';
+
+    // Sample type
+    const sampleType = profile?.sampleType;
+    const sampleTypeStr = sampleType
+      ? `${strings[sampleType.typeStrindex ?? 0] ?? '?'}(${strings[sampleType.unitStrindex ?? 0] ?? '?'})`
+      : '?';
 
     // Aggregate values
-    const sampleTypes = data.profile.sampleType.map(
-      (st) => `${strings[toNumber(st.type)] || '?'}(${strings[toNumber(st.unit)] || '?'})`,
-    );
-
-    const totalValues = new Array(data.profile.sampleType.length).fill(0);
-    for (const sample of data.profile.sample) {
-      for (let i = 0; i < sample.value.length && i < totalValues.length; i++) {
-        totalValues[i] += toNumber(sample.value[i]);
+    let totalValue = 0;
+    for (const sample of samples) {
+      for (const v of sample.values ?? []) {
+        totalValue += typeof v === 'number' ? v : Number(v);
       }
     }
 
-    // Top functions by frequency (leaf frame)
+    // Top functions by leaf frame frequency
     const leafCounts = new Map<string, number>();
-    for (const sample of data.profile.sample) {
-      if (sample.locationId.length === 0) continue;
-      const leafLocId = toNumber(sample.locationId[0]);
-      const loc = data.profile.location.find((l) => toNumber(l.id) === leafLocId);
-      if (loc && loc.line.length > 0) {
-        const funcId = toNumber(loc.line[0].functionId);
-        const func = data.profile.function.find((f) => toNumber(f.id) === funcId);
-        if (func) {
-          const name = strings[toNumber(func.name)] || '(unknown)';
-          leafCounts.set(name, (leafCounts.get(name) || 0) + 1);
-        }
-      }
+    for (const sample of samples) {
+      const stackIdx = sample.stackIndex ?? 0;
+      const stack = stacks[stackIdx];
+      const locIndices = stack?.locationIndices ?? [];
+      if (locIndices.length === 0) continue;
+
+      const leafLocIdx = locIndices[0];
+      const loc = locations[typeof leafLocIdx === 'number' ? leafLocIdx : 0];
+      const lines = loc?.lines ?? [];
+      if (lines.length === 0) continue;
+
+      const funcIdx = lines[0].functionIndex ?? 0;
+      const fn = functions[typeof funcIdx === 'number' ? funcIdx : 0];
+      const nameIdx = fn?.nameStrindex ?? 0;
+      const name = strings[typeof nameIdx === 'number' ? nameIdx : 0] || '(unknown)';
+      leafCounts.set(name, (leafCounts.get(name) ?? 0) + 1);
     }
     const topFunctions = [...leafCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
 
     console.log(
       `--- Profile [${data.profileType}] ---\n` +
-        `  Service:    ${resource['service.name'] || 'unknown'}\n` +
+        `  Service:    ${serviceName}\n` +
         `  Duration:   ${duration}ms\n` +
-        `  Samples:    ${sampleCount}\n` +
-        `  Functions:  ${functionCount}\n` +
-        `  Types:      ${sampleTypes.join(', ')}\n` +
-        `  Totals:     ${totalValues.map((v, i) => `${sampleTypes[i]}=${v}`).join(', ')}\n` +
+        `  Samples:    ${samples.length}\n` +
+        `  Functions:  ${functions.length}\n` +
+        `  Type:       ${sampleTypeStr}\n` +
+        `  Total:      ${sampleTypeStr}=${totalValue}\n` +
         `  Top frames:\n` +
         topFunctions
           .map(([name, count]) => `    ${count.toString().padStart(5)} ${name}`)

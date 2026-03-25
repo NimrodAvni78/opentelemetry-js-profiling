@@ -1,16 +1,19 @@
-import { Profile } from 'pprof-format';
+import type { opentelemetry } from './generated/otlp';
+
+export type IExportProfilesServiceRequest =
+  opentelemetry.proto.collector.profiles.v1development.IExportProfilesServiceRequest;
 
 export type ResourceAttributes = Record<string, string | number | boolean>;
 
 export interface ProfileData {
-  profile: Profile;
   profileType: 'wall' | 'heap';
   startedAt: Date;
   stoppedAt: Date;
+  request: IExportProfilesServiceRequest;
 }
 
 export interface ProfileExporter {
-  export(data: ProfileData, resource: ResourceAttributes): Promise<void>;
+  export(data: ProfileData): Promise<void>;
   shutdown(): Promise<void>;
 }
 
@@ -18,6 +21,8 @@ export interface ProfilingProviderConfig {
   resource?: ResourceAttributes;
   serviceName?: string;
   exporter?: ProfileExporter;
+  traceCorrelation?: boolean;
+  spanAttributeKeys?: string[];
   wallProfilingEnabled?: boolean;
   heapProfilingEnabled?: boolean;
   collectionIntervalMs?: number;

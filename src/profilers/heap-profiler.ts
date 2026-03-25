@@ -1,6 +1,6 @@
 import * as pprof from '@datadog/pprof';
 import { Profile } from 'pprof-format';
-import { ProfileData } from '../types';
+import { RawProfileData } from './raw-profile-data';
 
 export interface HeapProfilerOptions {
   samplingIntervalBytes?: number;
@@ -25,7 +25,7 @@ export class HeapProfiler {
     this.lastCollectTime = new Date();
   }
 
-  collect(): ProfileData {
+  collect(): RawProfileData {
     if (!this.started) throw new Error('Heap profiler not started');
     const startedAt = this.lastCollectTime!;
     const profile = pprof.heap.profile() as unknown as Profile;
