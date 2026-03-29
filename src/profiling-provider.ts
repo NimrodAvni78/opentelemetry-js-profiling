@@ -1,3 +1,4 @@
+import * as pprof from '@datadog/pprof';
 import { ProfileExporter, ProfilingProviderConfig, ResourceAttributes } from './types';
 import { resolveResource } from './resource';
 import { WallProfiler } from './profilers/wall-profiler';
@@ -40,8 +41,14 @@ export class ProfilingProvider {
     }
   }
 
-  start(): void {
+  async start(): Promise<void> {
     if (this.timer) return;
+
+    let sourceMapper: pprof.SourceMapper | undefined;
+    const searchPaths = this.config.sourceMapSearchPaths;
+    if (searchPaths && searchPaths.length > 0) {
+      sourceMapper = await pprof.SourceMapper.create(searchPaths);
+    }
 
     const wallEnabled = this.config.wallProfilingEnabled ?? true;
     const heapEnabled = this.config.heapProfilingEnabled ?? true;
@@ -51,6 +58,7 @@ export class ProfilingProvider {
         samplingIntervalMicros: this.config.wallSamplingIntervalMicros,
         traceCorrelation: this.config.traceCorrelation,
         spanAttributeKeys: this.config.spanAttributeKeys,
+        sourceMapper,
       });
       this.wallProfiler.start();
     }
@@ -59,6 +67,7 @@ export class ProfilingProvider {
       this.heapProfiler = new HeapProfiler({
         samplingIntervalBytes: this.config.heapSamplingIntervalBytes,
         stackDepth: this.config.heapStackDepth,
+        sourceMapper,
       });
       this.heapProfiler.start();
     }

@@ -25,7 +25,7 @@ const provider = new ProfilingProvider({
   serviceName: 'my-service',
 });
 
-provider.start();
+await provider.start();
 
 // Your application code...
 
@@ -65,6 +65,9 @@ const provider = new ProfilingProvider({
   // Heap profiler tuning
   heapSamplingIntervalBytes: 524_288, // default: 524288 (512KB)
   heapStackDepth: 64,                 // default: 64
+
+  // Source maps — map compiled JS back to original TypeScript sources
+  sourceMapSearchPaths: ['./dist'],
 
   // Exporter — defaults to OTLP gRPC
   exporter: new OtlpGrpcProfileExporter({
@@ -170,7 +173,22 @@ The wall profiler samples at regular wall-clock intervals regardless of whether 
 
 ### Async stack limitation
 
-When Node.js hits an `await`, the call stack is unwound — there's no stack to sample. This means a function like `await db.query()` appears as `(idle)` samples, not as samples attributed to `db.query`.
+When Node.js hits an `await`, the call stack is unwound — there's no stack to sample. This means a function like `await db.query()` appears as `(idle)` samples, not as samples attributed to `db.query`. Enabling `traceCorrelation` helps bridge this gap by attributing idle time to the span that was active.
+
+### Source Maps
+
+When profiling TypeScript or bundled applications, V8 reports function names and filenames from the compiled JS output. Enable `sourceMapSearchPaths` to map these back to original source files:
+
+```typescript
+const provider = new ProfilingProvider({
+  sourceMapSearchPaths: ['./dist'],
+});
+await await provider.start();
+```
+
+The provider scans the specified directories for `.js.map` files at startup. Profiles will then show original filenames and line numbers (e.g. `src/handler.ts:42` instead of `dist/handler.js:120`).
+
+Requires your build to emit source maps (e.g. `"sourceMap": true` in `tsconfig.json`).
 
 ## Examples
 
@@ -178,6 +196,7 @@ See the [`examples/`](./examples) directory:
 
 - [`basic.ts`](./examples/basic.ts) — minimal setup with console exporter
 - [`otlp-collector.ts`](./examples/otlp-collector.ts) — export to an OTel Collector
+- [`source-maps.ts`](./examples/source-maps.ts) — map compiled JS back to TypeScript sources
 
 ## API Reference
 

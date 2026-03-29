@@ -26,7 +26,7 @@ const provider = new ProfilingProvider({
   collectionIntervalMs: 10_000,
 });
 
-provider.start();
+await provider.start();
 console.log('Profiling started — exporting to collector at localhost:4317');
 console.log('Press Ctrl+C to stop.');
 

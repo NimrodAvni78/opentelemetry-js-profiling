@@ -29,4 +29,6 @@ export interface ProfilingProviderConfig {
   wallSamplingIntervalMicros?: number;
   heapSamplingIntervalBytes?: number;
   heapStackDepth?: number;
+  /** Directories to scan for source maps. Enables mapping compiled JS back to original sources. */
+  sourceMapSearchPaths?: string[];
 }

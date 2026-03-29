@@ -7,6 +7,7 @@ export interface WallProfilerOptions {
   samplingIntervalMicros?: number;
   traceCorrelation?: boolean;
   spanAttributeKeys?: string[];
+  sourceMapper?: pprof.SourceMapper;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -25,6 +26,7 @@ export class WallProfiler {
   private readonly intervalMicros: number;
   private readonly traceCorrelation: boolean;
   private readonly spanAttributeKeys: string[];
+  private readonly sourceMapper: pprof.SourceMapper | undefined;
   private started = false;
   private lastCollectTime: Date | null = null;
   private otelApi: OtelApi | null = null;
@@ -35,6 +37,7 @@ export class WallProfiler {
     this.intervalMicros = options.samplingIntervalMicros ?? 10000; // 100Hz
     this.traceCorrelation = options.traceCorrelation ?? false;
     this.spanAttributeKeys = options.spanAttributeKeys ?? [];
+    this.sourceMapper = options.sourceMapper;
   }
 
   start(): void {
@@ -57,6 +60,7 @@ export class WallProfiler {
       withContexts,
       workaroundV8Bug: true,
       collectCpuTime: false,
+      sourceMapper: this.sourceMapper,
     });
 
     if (withContexts) {

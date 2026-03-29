@@ -12,7 +12,7 @@ const provider = new ProfilingProvider({
   collectionIntervalMs: 5_000,
 });
 
-provider.start();
+await provider.start();
 console.log('Profiling started — generating CPU work for ~15s...');
 
 // Simulate CPU-intensive work

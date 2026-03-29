@@ -5,17 +5,20 @@ import { RawProfileData } from './raw-profile-data';
 export interface HeapProfilerOptions {
   samplingIntervalBytes?: number;
   stackDepth?: number;
+  sourceMapper?: pprof.SourceMapper;
 }
 
 export class HeapProfiler {
   private readonly intervalBytes: number;
   private readonly stackDepth: number;
+  private readonly sourceMapper: pprof.SourceMapper | undefined;
   private started = false;
   private lastCollectTime: Date | null = null;
 
   constructor(options: HeapProfilerOptions = {}) {
     this.intervalBytes = options.samplingIntervalBytes ?? 524288; // 512KB
     this.stackDepth = options.stackDepth ?? 64;
+    this.sourceMapper = options.sourceMapper;
   }
 
   start(): void {
@@ -28,7 +31,7 @@ export class HeapProfiler {
   collect(): RawProfileData {
     if (!this.started) throw new Error('Heap profiler not started');
     const startedAt = this.lastCollectTime!;
-    const profile = pprof.heap.profile() as unknown as Profile;
+    const profile = pprof.heap.profile(undefined, this.sourceMapper) as unknown as Profile;
     this.lastCollectTime = new Date();
     return {
       profile,
