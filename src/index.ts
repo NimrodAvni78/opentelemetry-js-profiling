@@ -1,5 +1,6 @@
 export { ProfilingProvider } from './profiling-provider';
 export { ConsoleProfileExporter } from './exporters/console-exporter';
+export type { ConsoleExporterConfig, ConsoleExporterVerbosity } from './exporters/console-exporter';
 export { OtlpGrpcProfileExporter } from './exporters/otlp-grpc-exporter';
 export type { OtlpGrpcExporterConfig } from './exporters/otlp-grpc-exporter';
 export type {
