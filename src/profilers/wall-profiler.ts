@@ -1,4 +1,3 @@
-import { AsyncLocalStorage } from 'node:async_hooks';
 import * as pprof from '@datadog/pprof';
 import { Profile } from 'pprof-format';
 import { RawProfileData } from './raw-profile-data';
@@ -31,7 +30,7 @@ export class WallProfiler {
   private lastCollectTime: Date | null = null;
   private otelApi: OtelApi | null = null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private origRun: ((...args: any[]) => any) | null = null;
+  private origContextWith: ((...args: any[]) => any) | null = null;
 
   constructor(options: WallProfilerOptions = {}) {
     this.intervalMicros = options.samplingIntervalMicros ?? 10000; // 100Hz
@@ -64,42 +63,51 @@ export class WallProfiler {
     });
 
     if (withContexts) {
-      this.patchAsyncLocalStorage();
+      this.patchOtelContextWith();
     }
 
     this.started = true;
     this.lastCollectTime = new Date();
   }
 
-  private patchAsyncLocalStorage(): void {
+  /**
+   * Wraps @opentelemetry/api context.with() to propagate trace context to pprof.
+   * This works with ANY context manager (AsyncHooksContextManager,
+   * AsyncLocalStorageContextManager, etc.) because context.with() is the
+   * universal entry point for all OTel context changes.
+   */
+  private patchOtelContextWith(): void {
     const otelApi = this.otelApi!;
-    this.origRun = AsyncLocalStorage.prototype.run;
-    const origRun = this.origRun;
+    const contextApi = otelApi.context;
+    this.origContextWith = contextApi.with.bind(contextApi);
+    const origWith = this.origContextWith!;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    AsyncLocalStorage.prototype.run = function (store: any, callback: any, ...runArgs: any[]) {
-      const wrappedCallback = function (
-        this: unknown,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ...cbArgs: any[]
-      ): unknown {
-        const span = otelApi.trace.getActiveSpan();
+    contextApi.with = function (context: any, fn: any, thisArg?: any, ...args: any[]) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const wrappedFn = function (this: unknown, ...fnArgs: any[]) {
+        const prevContext = pprof.time.getContext();
+        const span = otelApi.trace.getSpan(context);
         if (span) {
           const ctx = span.spanContext();
           pprof.time.setContext({ traceId: ctx.traceId, spanId: ctx.spanId, span });
         } else {
           pprof.time.setContext(undefined);
         }
-        return callback.apply(this, cbArgs);
+        try {
+          return fn.call(this, ...fnArgs);
+        } finally {
+          pprof.time.setContext(prevContext);
+        }
       };
-      return origRun.call(this, store, wrappedCallback, ...runArgs);
+      return origWith(context, wrappedFn, thisArg, ...args);
     };
   }
 
-  private unpatchAsyncLocalStorage(): void {
-    if (this.origRun) {
-      AsyncLocalStorage.prototype.run = this.origRun;
-      this.origRun = null;
+  private unpatchOtelContextWith(): void {
+    if (this.origContextWith && this.otelApi) {
+      this.otelApi.context.with = this.origContextWith;
+      this.origContextWith = null;
     }
   }
 
@@ -123,7 +131,7 @@ export class WallProfiler {
     if (!this.started) return null;
     const startedAt = this.lastCollectTime!;
 
-    this.unpatchAsyncLocalStorage();
+    this.unpatchOtelContextWith();
 
     const generateLabels = this.traceCorrelation ? this.buildGenerateLabels() : undefined;
     const rawProfile = pprof.time.stop(false, generateLabels); // restart=false
