@@ -84,11 +84,14 @@ const provider = new ProfilingProvider({
   // Source maps — map compiled JS back to original TypeScript sources
   sourceMapSearchPaths: ['./dist'],
 
-  // Exporter — defaults to OTLP gRPC
-  exporter: new OtlpGrpcProfileExporter({
-    endpoint: 'http://localhost:4317',
-    headers: { 'x-api-key': 'secret' },
-  }),
+  // Exporters — defaults to [OtlpGrpcProfileExporter]
+  exporters: [
+    new OtlpGrpcProfileExporter({
+      endpoint: 'http://localhost:4317',
+      headers: { 'x-api-key': 'secret' },
+    }),
+    new ConsoleProfileExporter({ verbosity: 'basic' }),
+  ],
 });
 ```
 
@@ -98,7 +101,7 @@ const provider = new ProfilingProvider({
 |----------|-------------|---------|
 | `OTEL_SERVICE_NAME` | Service name | `unknown` |
 | `OTEL_RESOURCE_ATTRIBUTES` | Comma-separated `key=value` pairs | — |
-| `OTEL_PROFILES_EXPORTER` | Exporter: `otlp`, `console`, `none` | `otlp` |
+| `OTEL_PROFILES_EXPORTER` | Comma-separated exporters: `otlp`, `console`, `none` | `otlp` |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP gRPC endpoint | `http://localhost:4317` |
 | `OTEL_EXPORTER_OTLP_HEADERS` | Comma-separated `key=value` headers | — |
 
@@ -265,7 +268,7 @@ See the [`examples/`](./examples) directory:
 |--------|------|---------|-------------|
 | `serviceName` | `string` | `'unknown'` | Service name |
 | `resource` | `Record<string, string \| number \| boolean>` | — | Additional resource attributes |
-| `exporter` | `ProfileExporter` | OTLP gRPC | Custom exporter instance |
+| `exporters` | `ProfileExporter[]` | `[OtlpGrpcProfileExporter]` | Exporter instances |
 | `traceCorrelation` | `boolean` | `false` | Link samples to active OTel spans |
 | `spanAttributeKeys` | `string[]` | `[]` | Span attributes to copy onto samples |
 | `wallProfilingEnabled` | `boolean` | `true` | Enable wall-clock profiling |

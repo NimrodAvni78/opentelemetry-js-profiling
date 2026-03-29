@@ -64,7 +64,7 @@ describe('ProfilingProvider', () => {
     const exporter = new CollectingExporter();
     const provider = new ProfilingProvider({
       serviceName: 'test-service',
-      exporter,
+      exporters: [exporter],
       collectionIntervalMs: 60_000,
       heapProfilingEnabled: false,
     });
@@ -84,7 +84,7 @@ describe('ProfilingProvider', () => {
     const exporter = new CollectingExporter();
     const provider = new ProfilingProvider({
       serviceName: 'test-service',
-      exporter,
+      exporters: [exporter],
       collectionIntervalMs: 60_000,
       wallProfilingEnabled: false,
       heapSamplingIntervalBytes: 256,
@@ -107,7 +107,7 @@ describe('ProfilingProvider', () => {
     const provider = new ProfilingProvider({
       serviceName: 'my-svc',
       resource: { 'deployment.environment': 'test' },
-      exporter,
+      exporters: [exporter],
       collectionIntervalMs: 60_000,
       heapProfilingEnabled: false,
     });
@@ -130,7 +130,7 @@ describe('ProfilingProvider', () => {
     const exporter = new CollectingExporter();
     const provider = new ProfilingProvider({
       serviceName: 'test-service',
-      exporter,
+      exporters: [exporter],
       collectionIntervalMs: 200,
       heapProfilingEnabled: false,
     });
@@ -172,7 +172,7 @@ describe('trace correlation', () => {
     const exporter = new CollectingExporter();
     const provider = new ProfilingProvider({
       serviceName: 'test-correlation',
-      exporter,
+      exporters: [exporter],
       traceCorrelation: true,
       collectionIntervalMs: 60_000,
       heapProfilingEnabled: false,
@@ -226,7 +226,7 @@ describe('trace correlation', () => {
     const exporter = new CollectingExporter();
     const provider = new ProfilingProvider({
       serviceName: 'attr-test',
-      exporter,
+      exporters: [exporter],
       traceCorrelation: true,
       spanAttributeKeys: ['http.route', 'custom.tag'],
       collectionIntervalMs: 60_000,
@@ -275,7 +275,7 @@ describe('OTLP encoding', () => {
     const exporter = new CollectingExporter();
     const provider = new ProfilingProvider({
       serviceName: 'roundtrip-test',
-      exporter,
+      exporters: [exporter],
       collectionIntervalMs: 60_000,
       heapProfilingEnabled: false,
     });

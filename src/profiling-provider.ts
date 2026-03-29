@@ -12,7 +12,7 @@ const DEFAULT_COLLECTION_INTERVAL_MS = 10000;
 
 export class ProfilingProvider {
   private readonly resource: ResourceAttributes;
-  private readonly exporter: ProfileExporter;
+  private readonly exporters: ProfileExporter[];
   private wallProfiler: WallProfiler | null = null;
   private heapProfiler: HeapProfiler | null = null;
   private timer: NodeJS.Timeout | null = null;
@@ -24,21 +24,27 @@ export class ProfilingProvider {
       serviceName: config.serviceName,
       attributes: config.resource,
     });
-    this.exporter = config.exporter ?? this.resolveExporter();
+    this.exporters = config.exporters ?? this.resolveExporters();
   }
 
-  private resolveExporter(): ProfileExporter {
+  private resolveExporters(): ProfileExporter[] {
     const env = process.env.OTEL_PROFILES_EXPORTER ?? 'otlp';
-    switch (env) {
-      case 'console':
-        return new ConsoleProfileExporter();
-      case 'none':
-        return { export: async () => {}, shutdown: async () => {} };
-      case 'otlp':
-      case 'otlp_grpc':
-      default:
-        return new OtlpGrpcProfileExporter();
+    const names = new Set(env.split(',').map((s) => s.trim()).filter(Boolean));
+    const exporters: ProfileExporter[] = [];
+    for (const name of names) {
+      switch (name) {
+        case 'console':
+          exporters.push(new ConsoleProfileExporter());
+          break;
+        case 'none':
+          break;
+        case 'otlp':
+        case 'otlp_grpc':
+          exporters.push(new OtlpGrpcProfileExporter());
+          break;
+      }
     }
+    return exporters.length > 0 ? exporters : [new OtlpGrpcProfileExporter()];
   }
 
   async start(): Promise<void> {
@@ -101,19 +107,18 @@ export class ProfilingProvider {
       this.heapProfiler = null;
     }
 
-    await this.exporter.shutdown();
+    await Promise.all(this.exporters.map((e) => e.shutdown()));
   }
 
   private async convertAndExport(raw: RawProfileData): Promise<void> {
     const request = buildRequest([raw], this.resource);
-    await this.exporter
-      .export({
-        profileType: raw.profileType,
-        startedAt: raw.startedAt,
-        stoppedAt: raw.stoppedAt,
-        request,
-      })
-      .catch(() => {});
+    const data = {
+      profileType: raw.profileType,
+      startedAt: raw.startedAt,
+      stoppedAt: raw.stoppedAt,
+      request,
+    };
+    await Promise.all(this.exporters.map((e) => e.export(data).catch(() => {})));
   }
 
   private async collectAndExport(): Promise<void> {
