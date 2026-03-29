@@ -1,4 +1,12 @@
-import { ProfileData, ProfileExporter } from '../types';
+import { ProfileData, ProfileExporter, IExportProfilesServiceRequest } from '../types';
+import type { opentelemetry } from '../generated/otlp';
+
+type IProfilesDictionary = opentelemetry.proto.profiles.v1development.IProfilesDictionary;
+type IResourceProfiles = opentelemetry.proto.profiles.v1development.IResourceProfiles;
+type IScopeProfiles = opentelemetry.proto.profiles.v1development.IScopeProfiles;
+type IProfile = opentelemetry.proto.profiles.v1development.IProfile;
+type IKeyValue = opentelemetry.proto.common.v1.IKeyValue;
+type IAnyValue = opentelemetry.proto.common.v1.IAnyValue;
 
 export type ConsoleExporterVerbosity = 'basic' | 'normal' | 'detailed';
 
@@ -15,9 +23,9 @@ export class ConsoleProfileExporter implements ProfileExporter {
 
   async export(data: ProfileData): Promise<void> {
     const rp = data.request.resourceProfiles ?? [];
-    const dict = data.request.dictionary;
-    const strings = (dict?.stringTable as string[]) ?? [];
-    const sampleCount = this.countSamples(data);
+    const dict = data.request.dictionary ?? undefined;
+    const strings = (dict?.stringTable as string[] | undefined) ?? [];
+    const sampleCount = this.countSamples(data.request);
 
     // Basic: summary line only (matches debug exporter zap.Info)
     console.log(`Profiles\tresource profiles: ${rp.length}, sample records: ${sampleCount}`);
@@ -28,7 +36,7 @@ export class ConsoleProfileExporter implements ProfileExporter {
     const lines: string[] = [];
     for (let ri = 0; ri < rp.length; ri++) {
       const resource = rp[ri];
-      const resourceAttrs = this.formatAttributes(resource.resource?.attributes ?? []);
+      const resourceAttrs = this.formatKeyValues(resource.resource?.attributes ?? []);
       const schemaUrl = resource.schemaUrl ? ` [${resource.schemaUrl}]` : '';
       lines.push(`ResourceProfiles #${ri}${schemaUrl}${resourceAttrs}`);
 
@@ -77,9 +85,9 @@ export class ConsoleProfileExporter implements ProfileExporter {
 
   async shutdown(): Promise<void> {}
 
-  private countSamples(data: ProfileData): number {
+  private countSamples(request: IExportProfilesServiceRequest): number {
     let count = 0;
-    for (const rp of data.request.resourceProfiles ?? []) {
+    for (const rp of request.resourceProfiles ?? []) {
       for (const sp of rp.scopeProfiles ?? []) {
         for (const p of sp.profiles ?? []) {
           count += (p.samples ?? []).length;
@@ -89,28 +97,18 @@ export class ConsoleProfileExporter implements ProfileExporter {
     return count;
   }
 
-  private formatAttributes(
-    attrs: {
-      key?: string | null;
-      value?: {
-        stringValue?: string | null;
-        intValue?: number | Long | null;
-        boolValue?: boolean | null;
-        doubleValue?: number | null;
-      } | null;
-    }[],
-  ): string {
+  private formatAnyValue(v: IAnyValue | null | undefined): string {
+    if (!v) return '';
+    return String(v.stringValue ?? v.intValue ?? v.boolValue ?? v.doubleValue ?? '');
+  }
+
+  private formatKeyValues(attrs: IKeyValue[]): string {
     if (attrs.length === 0) return '';
-    const parts = attrs.map((a) => {
-      const v = a.value;
-      const val = v?.stringValue ?? v?.intValue ?? v?.boolValue ?? v?.doubleValue ?? '';
-      return `${a.key}=${val}`;
-    });
+    const parts = attrs.map((a) => `${a.key}=${this.formatAnyValue(a.value)}`);
     return ' ' + parts.join(' ');
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private formatScope(scope: any): string {
+  private formatScope(scope: IScopeProfiles): string {
     const name = scope.scope?.name ?? '';
     const version = scope.scope?.version;
     const schemaUrl = scope.schemaUrl;
@@ -126,28 +124,24 @@ export class ConsoleProfileExporter implements ProfileExporter {
   }
 
   private resolveAttributeIndices(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    indices: any[],
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    dict: any,
+    indices: number[],
+    dict: IProfilesDictionary | undefined,
     strings: string[],
   ): string {
-    if (!indices || indices.length === 0 || !dict) return '';
+    if (indices.length === 0 || !dict) return '';
     const attrs = dict.attributeTable ?? [];
     const parts: string[] = [];
     for (const idx of indices) {
-      const attr = attrs[typeof idx === 'number' ? idx : 0];
+      const attr = attrs[idx];
       if (!attr) continue;
       const key = strings[attr.keyStrindex ?? 0] ?? '';
-      const v = attr.value;
-      const val = v?.stringValue ?? v?.intValue ?? v?.boolValue ?? v?.doubleValue ?? '';
+      const val = this.formatAnyValue(attr.value);
       if (key) parts.push(`${key}=${val}`);
     }
     return parts.length > 0 ? ' ' + parts.join(' ') : '';
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private writeResourceDetailed(lines: string[], resource: any): void {
+  private writeResourceDetailed(lines: string[], resource: IResourceProfiles): void {
     if (resource.schemaUrl) {
       lines.push(`    Resource SchemaURL: ${resource.schemaUrl}`);
     }
@@ -155,16 +149,14 @@ export class ConsoleProfileExporter implements ProfileExporter {
     if (attrs.length > 0) {
       lines.push('    Resource attributes:');
       for (const a of attrs) {
-        const v = a.value;
-        const val = v?.stringValue ?? v?.intValue ?? v?.boolValue ?? v?.doubleValue ?? '';
-        const type = this.attrType(v);
+        const val = this.formatAnyValue(a.value);
+        const type = this.attrType(a.value);
         lines.push(`         -> ${a.key}: ${val} (${type})`);
       }
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private writeScopeDetailed(lines: string[], scope: any): void {
+  private writeScopeDetailed(lines: string[], scope: IScopeProfiles): void {
     if (scope.schemaUrl) {
       lines.push(`    ScopeProfiles SchemaURL: ${scope.schemaUrl}`);
     }
@@ -176,24 +168,38 @@ export class ConsoleProfileExporter implements ProfileExporter {
 
   private writeProfileDetailed(
     lines: string[],
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    profile: any,
+    profile: IProfile,
     index: number,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    dict: any,
+    dict: IProfilesDictionary | undefined,
     strings: string[],
   ): void {
     const profileId = this.formatProfileId(profile.profileId);
     lines.push(`    Profile #${index}`);
     lines.push(`        Profile ID: ${profileId}`);
+    if (profile.sampleType) {
+      const t = strings[profile.sampleType.typeStrindex ?? 0] ?? '';
+      const u = strings[profile.sampleType.unitStrindex ?? 0] ?? '';
+      lines.push(`        Sample type: ${t}/${u}`);
+    }
+    if (profile.periodType) {
+      const t = strings[profile.periodType.typeStrindex ?? 0] ?? '';
+      const u = strings[profile.periodType.unitStrindex ?? 0] ?? '';
+      lines.push(`        Period type: ${t}/${u}`);
+    }
+    if (profile.period) {
+      lines.push(`        Period: ${profile.period}`);
+    }
     if (profile.timeUnixNano) {
       lines.push(`        Start time: ${profile.timeUnixNano}`);
     }
     if (profile.durationNano) {
-      lines.push(`        DurationNano: ${profile.durationNano}`);
+      lines.push(`        Duration: ${profile.durationNano}ns`);
     }
     if (profile.droppedAttributesCount) {
       lines.push(`        Dropped attributes count: ${profile.droppedAttributesCount}`);
+    }
+    if (profile.originalPayloadFormat) {
+      lines.push(`        Original payload format: ${profile.originalPayloadFormat}`);
     }
 
     const samples = profile.samples ?? [];
@@ -208,11 +214,10 @@ export class ConsoleProfileExporter implements ProfileExporter {
         const attrs = dict.attributeTable ?? [];
         lines.push('            Attributes:');
         for (const idx of attrIndices) {
-          const attr = attrs[typeof idx === 'number' ? idx : 0];
+          const attr = attrs[idx];
           if (!attr) continue;
           const key = strings[attr.keyStrindex ?? 0] ?? '';
-          const v = attr.value;
-          const val = v?.stringValue ?? v?.intValue ?? v?.boolValue ?? v?.doubleValue ?? '';
+          const val = this.formatAnyValue(attr.value);
           lines.push(`                 -> ${key}: ${val}`);
         }
       }
@@ -222,7 +227,7 @@ export class ConsoleProfileExporter implements ProfileExporter {
         if (link) {
           const traceId = link.traceId ? Buffer.from(link.traceId).toString('hex') : '';
           const spanId = link.spanId ? Buffer.from(link.spanId).toString('hex') : '';
-          lines.push(`            Link:`);
+          lines.push('            Link:');
           lines.push(`                 -> Trace ID: ${traceId}`);
           lines.push(`                 -> Span ID: ${spanId}`);
         }
@@ -232,8 +237,7 @@ export class ConsoleProfileExporter implements ProfileExporter {
 
   private writeDictionaryDetailed(
     lines: string[],
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    dict: any,
+    dict: IProfilesDictionary | undefined,
     strings: string[],
   ): void {
     if (!dict) return;
@@ -295,14 +299,12 @@ export class ConsoleProfileExporter implements ProfileExporter {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private attrType(v: any): string {
-    if (v?.stringValue != null) return 'Str';
-    if (v?.intValue != null) return 'Int';
-    if (v?.boolValue != null) return 'Bool';
-    if (v?.doubleValue != null) return 'Double';
+  private attrType(v: IAnyValue | null | undefined): string {
+    if (!v) return 'Unknown';
+    if (v.stringValue != null) return 'Str';
+    if (v.intValue != null) return 'Int';
+    if (v.boolValue != null) return 'Bool';
+    if (v.doubleValue != null) return 'Double';
     return 'Unknown';
   }
 }
-
-type Long = number | { low: number; high: number };
