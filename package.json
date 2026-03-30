@@ -10,7 +10,7 @@
   "scripts": {
     "prepare": "npm run build && husky",
     "proto:fetch": "npx cx-protofetch fetch",
-    "proto:generate": "mkdir -p src/generated && npx pbjs -t static-module -w commonjs --no-create --no-verify --no-convert --no-delimited -p proto -o src/generated/otlp.js proto/opentelemetry/proto/common/v1/common.proto proto/opentelemetry/proto/resource/v1/resource.proto proto/opentelemetry/proto/profiles/v1development/profiles.proto proto/opentelemetry/proto/collector/profiles/v1development/profiles_service.proto && npx pbts -o src/generated/otlp.d.ts src/generated/otlp.js",
+    "proto:generate": "mkdir -p src/generated && npx pbjs -t static-module -w commonjs --no-create --no-verify --no-convert --no-delimited -r otel-profiling-node -p proto -o src/generated/otlp.js proto/opentelemetry/proto/common/v1/common.proto proto/opentelemetry/proto/resource/v1/resource.proto proto/opentelemetry/proto/profiles/v1development/profiles.proto proto/opentelemetry/proto/collector/profiles/v1development/profiles_service.proto && npx pbts -o src/generated/otlp.d.ts src/generated/otlp.js",
     "proto": "npm run proto:fetch && npm run proto:generate",
     "build": "npm run proto && tsc",
     "test": "vitest run",
