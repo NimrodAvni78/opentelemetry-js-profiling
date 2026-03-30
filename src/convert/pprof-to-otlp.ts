@@ -209,6 +209,7 @@ export function pprofToOtlp(
       values: sample.value.map((v) => toNumber(v)),
       attributeIndices,
       linkIndex: linkIndex || undefined,
+      timestampsUnixNano: [toNumber(pprof.timeNanos)],
     });
   }
 
