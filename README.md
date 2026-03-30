@@ -102,8 +102,10 @@ const provider = new ProfilingProvider({
 | `OTEL_SERVICE_NAME` | Service name | `unknown` |
 | `OTEL_RESOURCE_ATTRIBUTES` | Comma-separated `key=value` pairs | — |
 | `OTEL_PROFILES_EXPORTER` | Comma-separated exporters: `otlp`, `console`, `none` | `otlp` |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP gRPC endpoint | `http://localhost:4317` |
-| `OTEL_EXPORTER_OTLP_HEADERS` | Comma-separated `key=value` headers | — |
+| `OTEL_EXPORTER_OTLP_PROFILES_ENDPOINT` | Profiles-specific OTLP gRPC endpoint | — |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | General OTLP gRPC endpoint (fallback) | `http://localhost:4317` |
+| `OTEL_EXPORTER_OTLP_PROFILES_HEADERS` | Profiles-specific headers | — |
+| `OTEL_EXPORTER_OTLP_HEADERS` | General OTLP headers (fallback) | — |
 
 Environment variables are overridden by programmatic config.
 

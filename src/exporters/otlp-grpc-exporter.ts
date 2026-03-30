@@ -24,14 +24,20 @@ export class OtlpGrpcProfileExporter implements ProfileExporter {
 
   constructor(config: OtlpGrpcExporterConfig = {}) {
     const url =
-      config.endpoint ?? process.env.OTEL_EXPORTER_OTLP_ENDPOINT ?? 'http://localhost:4317';
+      config.endpoint ??
+      process.env.OTEL_EXPORTER_OTLP_PROFILES_ENDPOINT ??
+      process.env.OTEL_EXPORTER_OTLP_ENDPOINT ??
+      'http://localhost:4317';
     const parsed = new URL(url);
     this.host = parsed.hostname;
     this.port = parsed.port || '4317';
     this.secure = parsed.protocol === 'https:';
     this.headers = { ...(config.headers ?? {}) };
 
-    const headersEnv = process.env.OTEL_EXPORTER_OTLP_HEADERS ?? '';
+    const headersEnv =
+      process.env.OTEL_EXPORTER_OTLP_PROFILES_HEADERS ??
+      process.env.OTEL_EXPORTER_OTLP_HEADERS ??
+      '';
     if (headersEnv) {
       for (const pair of headersEnv.split(',')) {
         const eqIdx = pair.indexOf('=');
