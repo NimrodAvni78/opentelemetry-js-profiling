@@ -8,7 +8,7 @@
     "node": ">=18"
   },
   "scripts": {
-    "prepare": "npm run build",
+    "prepare": "npm run build && husky",
     "proto:fetch": "npx cx-protofetch fetch",
     "proto:generate": "mkdir -p src/generated && npx pbjs -t static-module -w commonjs --no-create --no-verify --no-convert --no-delimited -p proto -o src/generated/otlp.js proto/opentelemetry/proto/common/v1/common.proto proto/opentelemetry/proto/resource/v1/resource.proto proto/opentelemetry/proto/profiles/v1development/profiles.proto proto/opentelemetry/proto/collector/profiles/v1development/profiles_service.proto && npx pbts -o src/generated/otlp.d.ts src/generated/otlp.js",
     "proto": "npm run proto:fetch && npm run proto:generate",
@@ -24,7 +24,18 @@
     "pprof-format": "^2.2.0",
     "protobufjs": "^7.0.0"
   },
+  "peerDependencies": {
+    "@opentelemetry/api": ">=1.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@opentelemetry/api": {
+      "optional": true
+    }
+  },
   "devDependencies": {
+    "@opentelemetry/api": "^1.9.1",
+    "@opentelemetry/context-async-hooks": "^2.6.1",
+    "@opentelemetry/sdk-trace-base": "^2.6.1",
     "@types/node": "^20.0.0",
     "@typescript-eslint/eslint-plugin": "^8.57.1",
     "@typescript-eslint/parser": "^8.57.1",
@@ -32,9 +43,11 @@
     "eslint": "^9.39.4",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.5",
+    "husky": "^9.1.7",
     "prettier": "^3.8.1",
     "protobufjs-cli": "^2.0.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "vitest": "^1.6.1"
   },
   "files": [
     "dist"

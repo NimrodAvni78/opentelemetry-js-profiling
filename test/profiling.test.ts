@@ -163,9 +163,10 @@ describe('trace correlation', () => {
     context.setGlobalContextManager(contextManager.enable());
 
     const spanExporter = new InMemorySpanExporter();
-    tracerProvider = new BasicTracerProvider();
-    tracerProvider.addSpanProcessor(new SimpleSpanProcessor(spanExporter));
-    tracerProvider.register();
+    tracerProvider = new BasicTracerProvider({
+      spanProcessors: [new SimpleSpanProcessor(spanExporter)],
+    });
+    trace.setGlobalTracerProvider(tracerProvider);
 
     const tracer = trace.getTracer('test');
 
@@ -217,9 +218,10 @@ describe('trace correlation', () => {
     context.setGlobalContextManager(contextManager.enable());
 
     const spanExporter = new InMemorySpanExporter();
-    tracerProvider = new BasicTracerProvider();
-    tracerProvider.addSpanProcessor(new SimpleSpanProcessor(spanExporter));
-    tracerProvider.register();
+    tracerProvider = new BasicTracerProvider({
+      spanProcessors: [new SimpleSpanProcessor(spanExporter)],
+    });
+    trace.setGlobalTracerProvider(tracerProvider);
 
     const tracer = trace.getTracer('test');
 

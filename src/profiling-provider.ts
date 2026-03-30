@@ -29,7 +29,12 @@ export class ProfilingProvider {
 
   private resolveExporters(): ProfileExporter[] {
     const env = process.env.OTEL_PROFILES_EXPORTER ?? 'otlp';
-    const names = new Set(env.split(',').map((s) => s.trim()).filter(Boolean));
+    const names = new Set(
+      env
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean),
+    );
     const exporters: ProfileExporter[] = [];
     for (const name of names) {
       switch (name) {
