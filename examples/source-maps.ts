@@ -24,7 +24,7 @@ import { ProfilingProvider, ConsoleProfileExporter } from '../src';
 async function main(): Promise<void> {
   const provider = new ProfilingProvider({
     serviceName: 'source-map-example',
-    exporter: new ConsoleProfileExporter({ verbosity: 'detailed' }),
+    exporters: [new ConsoleProfileExporter({ verbosity: 'detailed' })],
     collectionIntervalMs: 5_000,
     heapProfilingEnabled: false,
     // Point at the directory containing compiled .js and .js.map files
