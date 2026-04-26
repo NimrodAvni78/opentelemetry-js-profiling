@@ -67,9 +67,9 @@ export class DictionaryBuilder {
   addLocation(loc: {
     mappingIndex?: number;
     address?: number;
-    lines?: { functionIndex: number; line: number }[];
+    line?: { functionIndex: number; line: number }[];
   }): number {
-    const linesKey = (loc.lines || []).map((l) => `${l.functionIndex}:${l.line}`).join(';');
+    const linesKey = (loc.line || []).map((l) => `${l.functionIndex}:${l.line}`).join(';');
     const key = `${loc.mappingIndex || 0}:${loc.address || 0}:${linesKey}`;
     let idx = this._locationKeyToIndex.get(key);
     if (idx !== undefined) return idx;
@@ -152,13 +152,13 @@ export function pprofToOtlp(
   // Locations
   const pprofLocIdToDict = new Map<number, number>();
   for (const loc of pprof.location) {
-    const lines = loc.line.map((line) => ({
-      functionIndex: pprofFuncIdToDict.get(toNumber(line.functionId)) ?? 0,
-      line: toNumber(line.line),
+    const line = loc.line.map((ln) => ({
+      functionIndex: pprofFuncIdToDict.get(toNumber(ln.functionId)) ?? 0,
+      line: toNumber(ln.line),
     }));
     pprofLocIdToDict.set(
       toNumber(loc.id),
-      dict.addLocation({ address: toNumber(loc.address), lines }),
+      dict.addLocation({ address: toNumber(loc.address), line }),
     );
   }
 
@@ -228,7 +228,7 @@ export function pprofToOtlp(
 
   return {
     sampleType,
-    samples: otlpSamples,
+    sample: otlpSamples,
     timeUnixNano: toNumber(pprof.timeNanos),
     durationNano: toNumber(pprof.durationNanos),
     periodType,

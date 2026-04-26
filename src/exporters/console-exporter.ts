@@ -57,7 +57,7 @@ export class ConsoleProfileExporter implements ProfileExporter {
         const profiles = scope.profiles ?? [];
         for (let pi = 0; pi < profiles.length; pi++) {
           const profile = profiles[pi];
-          const profileSamples = profile.samples ?? [];
+          const profileSamples = profile.sample ?? [];
           const profileId = this.formatProfileId(profile.profileId);
           const profileAttrs = this.resolveAttributeIndices(
             profile.attributeIndices ?? [],
@@ -90,7 +90,7 @@ export class ConsoleProfileExporter implements ProfileExporter {
     for (const rp of request.resourceProfiles ?? []) {
       for (const sp of rp.scopeProfiles ?? []) {
         for (const p of sp.profiles ?? []) {
-          count += (p.samples ?? []).length;
+          count += (p.sample ?? []).length;
         }
       }
     }
@@ -202,7 +202,7 @@ export class ConsoleProfileExporter implements ProfileExporter {
       lines.push(`        Original payload format: ${profile.originalPayloadFormat}`);
     }
 
-    const samples = profile.samples ?? [];
+    const samples = profile.sample ?? [];
     for (let si = 0; si < samples.length; si++) {
       const sample = samples[si];
       const values = (sample.values ?? []).join(', ');

@@ -112,12 +112,12 @@ describe('DictionaryBuilder', () => {
 
   it('deduplicates locations by content', () => {
     const dict = new DictionaryBuilder();
-    const loc = { address: 0x1000, lines: [{ functionIndex: 1, line: 42 }] };
+    const loc = { address: 0x1000, line: [{ functionIndex: 1, line: 42 }] };
     const a = dict.addLocation(loc);
     const b = dict.addLocation(loc);
     expect(a).toBe(b);
 
-    const different = { address: 0x2000, lines: [{ functionIndex: 1, line: 42 }] };
+    const different = { address: 0x2000, line: [{ functionIndex: 1, line: 42 }] };
     expect(dict.addLocation(different)).not.toBe(a);
   });
 
@@ -192,9 +192,9 @@ describe('pprofToOtlp', () => {
     expect(result.period).toBe(10000);
     expect(result.attributeIndices).toEqual([1, 2]);
     expect(result.sampleType).toBeDefined();
-    expect(result.samples).toHaveLength(1);
-    expect(result.samples[0].values).toEqual([1000]);
-    expect(result.samples[0].stackIndex).toBeGreaterThan(0);
+    expect(result.sample).toHaveLength(1);
+    expect(result.sample[0].values).toEqual([1000]);
+    expect(result.sample[0].stackIndex).toBeGreaterThan(0);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const built = dict.build() as any;
@@ -215,10 +215,10 @@ describe('pprofToOtlp', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result = pprofToOtlp(pprof, Buffer.alloc(16), [], dict) as any;
 
-    expect(result.samples[0].attributeIndices.length).toBe(1);
+    expect(result.sample[0].attributeIndices.length).toBe(1);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const built = dict.build() as any;
-    const attr = built.attributeTable[result.samples[0].attributeIndices[0]];
+    const attr = built.attributeTable[result.sample[0].attributeIndices[0]];
     expect(built.stringTable[attr.keyStrindex]).toBe('thread');
     expect(attr.value.stringValue).toBe('main-thread');
   });
@@ -234,7 +234,7 @@ describe('pprofToOtlp', () => {
     const result = pprofToOtlp(pprof, Buffer.alloc(16), [], dict) as any;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const built = dict.build() as any;
-    const attr = built.attributeTable[result.samples[0].attributeIndices[0]];
+    const attr = built.attributeTable[result.sample[0].attributeIndices[0]];
     expect(attr.value.intValue).toBe(4096);
   });
 
@@ -260,12 +260,12 @@ describe('pprofToOtlp', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result = pprofToOtlp(pprof, Buffer.alloc(16), [], dict) as any;
 
-    expect(result.samples[0].attributeIndices).toHaveLength(0);
-    expect(result.samples[0].linkIndex).toBeGreaterThan(0);
+    expect(result.sample[0].attributeIndices).toHaveLength(0);
+    expect(result.sample[0].linkIndex).toBeGreaterThan(0);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const built = dict.build() as any;
-    const link = built.linkTable[result.samples[0].linkIndex];
+    const link = built.linkTable[result.sample[0].linkIndex];
     expect(Buffer.from(link.traceId).toString('hex')).toBe(traceId);
     expect(Buffer.from(link.spanId).toString('hex')).toBe(spanId);
   });
@@ -290,12 +290,12 @@ describe('pprofToOtlp', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result = pprofToOtlp(pprof, Buffer.alloc(16), [], dict) as any;
 
-    expect(result.samples[0].linkIndex).toBeGreaterThan(0);
-    expect(result.samples[0].attributeIndices).toHaveLength(1);
+    expect(result.sample[0].linkIndex).toBeGreaterThan(0);
+    expect(result.sample[0].attributeIndices).toHaveLength(1);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const built = dict.build() as any;
-    const attr = built.attributeTable[result.samples[0].attributeIndices[0]];
+    const attr = built.attributeTable[result.sample[0].attributeIndices[0]];
     expect(built.stringTable[attr.keyStrindex]).toBe('http.route');
     expect(attr.value.stringValue).toBe('/api');
   });
@@ -305,7 +305,7 @@ describe('pprofToOtlp', () => {
     const dict = new DictionaryBuilder();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result = pprofToOtlp(pprof, Buffer.alloc(16), [], dict) as any;
-    expect(result.samples).toEqual([]);
+    expect(result.sample).toEqual([]);
     expect(result.sampleType).toBeUndefined();
   });
 
@@ -325,10 +325,10 @@ describe('pprofToOtlp', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result = pprofToOtlp(pprof, Buffer.alloc(16), [], dict) as any;
 
-    expect(result.samples).toHaveLength(3);
-    const stackIdx = result.samples[0].stackIndex;
-    expect(result.samples[1].stackIndex).toBe(stackIdx);
-    expect(result.samples[2].stackIndex).toBe(stackIdx);
+    expect(result.sample).toHaveLength(3);
+    const stackIdx = result.sample[0].stackIndex;
+    expect(result.sample[1].stackIndex).toBe(stackIdx);
+    expect(result.sample[2].stackIndex).toBe(stackIdx);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const built = dict.build() as any;

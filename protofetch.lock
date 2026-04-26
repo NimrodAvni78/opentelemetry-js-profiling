@@ -4,5 +4,5 @@ version = 2
 name = "opentelemetry-proto"
 url = "github.com/open-telemetry/opentelemetry-proto"
 protocol = "https"
-revision = "v1.10.0"
-commit_hash = "ca839c51f706f5d53bfb46f06c3e90c3af3a52c6"
+revision = "v1.8.0"
+commit_hash = "c0a98a1847d3124ac5f9ecd02d0e2d2732bbb590"

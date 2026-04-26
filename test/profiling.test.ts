@@ -208,7 +208,7 @@ describe('trace correlation', () => {
 
     const profile =
       wallProfiles[0].request.resourceProfiles?.[0]?.scopeProfiles?.[0]?.profiles?.[0];
-    const samples = profile?.samples ?? [];
+    const samples = profile?.sample ?? [];
     const samplesWithLinks = samples.filter((s) => s.linkIndex && s.linkIndex > 0);
     expect(samplesWithLinks.length).toBeGreaterThan(0);
   });
@@ -305,7 +305,7 @@ describe('OTLP encoding', () => {
     expect(profiles).toHaveLength(1);
     if (!profiles) return;
 
-    const samples = profiles[0].samples;
+    const samples = profiles[0].sample;
     expect(samples).toBeDefined();
     if (!samples) return;
     expect(samples.length).toBeGreaterThan(0);
