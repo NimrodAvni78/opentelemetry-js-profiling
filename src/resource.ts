@@ -5,7 +5,6 @@ export function resolveResource(config?: {
   attributes?: ResourceAttributes;
 }): ResourceAttributes {
   const attrs: ResourceAttributes = {
-    'service.name': 'unknown',
     'telemetry.sdk.language': 'javascript',
     'telemetry.sdk.name': '@opentelemetry/profiling-node',
     'runtime.name': 'nodejs',

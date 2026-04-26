@@ -99,7 +99,7 @@ const provider = new ProfilingProvider({
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `OTEL_SERVICE_NAME` | Service name | `unknown` |
+| `OTEL_SERVICE_NAME` | Service name | — |
 | `OTEL_RESOURCE_ATTRIBUTES` | Comma-separated `key=value` pairs | — |
 | `OTEL_PROFILES_EXPORTER` | Comma-separated exporters: `otlp`, `console`, `none` | `otlp` |
 | `OTEL_EXPORTER_OTLP_PROFILES_ENDPOINT` | Profiles-specific OTLP gRPC endpoint | — |
@@ -268,7 +268,7 @@ See the [`examples/`](./examples) directory:
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `serviceName` | `string` | `'unknown'` | Service name |
+| `serviceName` | `string` | — | Service name (optional; omitted from resource if unset) |
 | `resource` | `Record<string, string \| number \| boolean>` | — | Additional resource attributes |
 | `exporters` | `ProfileExporter[]` | `[OtlpGrpcProfileExporter]` | Exporter instances |
 | `traceCorrelation` | `boolean` | `false` | Link samples to active OTel spans |
